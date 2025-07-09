@@ -1,4 +1,4 @@
-tarsier terminal emulator
+# tarsier terminal emulator
 
 ![tarsier logo](./tarsier_logo.png)
 
