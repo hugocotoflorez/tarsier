@@ -99,16 +99,22 @@ display_text(int screen_width, int screen_height, tFont font, char *text)
         int row = 0;
         int length = strlen(text);
 
+        /* Todo: improve this, as it's not readable */
         do {
                 if (max_chars == 0) break;
-                int linesize = length < max_chars ? length : max_chars;
-                char prev = text[linesize];
-                text[linesize] = 0;
-                DrawTextEx(font.base, text, (Vector2) { 0.0f, (float) row }, font.size, font.spacing, GREEN);
-                text[linesize] = prev;
-                text += linesize;
-                row += font.height; // + spacing?
-                length -= linesize;
+                int linesize = length < max_chars ? length : max_chars; // min between remining chars in text and chars per line
+                int nl = strcspn(text, "\n");                           // distance to newline
+                linesize = linesize < nl ? linesize : nl;               // min between prev result and distance to newline
+                {
+                        char prev = text[linesize];
+                        text[linesize] = 0;
+                        DrawTextEx(font.base, text, (Vector2) { 0.0f, (float) row }, font.size, font.spacing, GREEN);
+                        text[linesize] = prev;
+                }
+                text += linesize;          // set text to start of not-yet-displayed text
+                row += font.height;        // + spacing? // move to next row
+                length -= linesize;        // update text length to avoid call strlen
+                if (*text == '\n') ++text; // avoid loop in \n
         } while (text && *text && row <= screen_height);
 }
 
@@ -171,7 +177,7 @@ main(void)
                 // TODO: Draw everything that requires to be drawn at this point:
 
                 char *text =
-                strdup("Congrats! You created your first window! "
+                strdup("Congrats! You created your first window! \n"
                        "fakshfhfjjfjfjfjfjshshdklldiowruoweurowieurwpoierupwoqi"
                        "eurpqwoiuerpoqiw0");
 
