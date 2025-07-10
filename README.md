@@ -1,6 +1,8 @@
-# tarsier terminal emulator
+# Tarsier terminal emulator
 
-![tarsier logo](./tarsier_logo.png)
+!<img src="./tarsier_logo.png" alt="Tarsier logo" style="width: 50%;">
+
+Programming books never talk about graphic design.
 
 ## Development status
 
