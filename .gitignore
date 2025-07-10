@@ -1,4 +1,6 @@
 aa
 tarsier
 tarsier.o
+term.o
 raylib
+objs
