@@ -1,13 +1,10 @@
 #include <assert.h>
-#include <ctype.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 #include "ascii.h"
-#include "sda.h"
 #include "term.h"
 
 #include "../raylib/src/raylib.h"
