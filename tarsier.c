@@ -1,10 +1,19 @@
 #include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "ascii.h"
 #include "raylib/src/raylib.h"
 #include "term.h"
+
+typedef struct tFont {
+  Font base;
+  float width, height;
+  float spacing;
+  float size;
+} tFont;
 
 typedef enum {
   MOD_NONE = 0,
@@ -57,6 +66,12 @@ int process_input(Term t) {
   return 0;
 }
 
+int get_window_size(int *h, int *w) {
+  *h = GetRenderHeight();
+  *w = GetRenderWidth();
+  return 0;
+}
+
 int process_output(Term t) {
   char buf[1024];
   while (read_fileno(t.master_fd, buf, sizeof buf)) {
@@ -66,11 +81,33 @@ int process_output(Term t) {
   return 0;
 }
 
-int main(void) {
-  const int screenWidth = 800;
-  const int screenHeight = 450;
+void display_text(int screen_width, tFont font, char *text) {
+  int max_chars = screen_width / font.width;
+  // printf("W: %d / Fw: %d = chars: %d\n", w, font_width, max_chars);
 
-  InitWindow(screenWidth, screenHeight, "Tarsier terminal emulator");
+  char *m = text;
+  int row = 0;
+
+  do {
+    if (max_chars <= 0)
+      break;
+    int length = (strlen(text) < max_chars) ? strlen(text) : max_chars;
+    char prev = text[length];
+    text[length] = 0;
+    DrawTextEx(font.base, text, (Vector2){0.0f, (float)row}, font.size,
+               font.spacing, GREEN);
+    text[length] = prev;
+    text += length;
+    row += font.height;
+  } while (text && *text);
+}
+
+int main(void) {
+
+  int screen_height = 800;
+  int screen_width = 450;
+
+  InitWindow(screen_width, screen_height, "Tarsier terminal emulator");
 
   // TODO: Load resources / Initialize variables at this point
 
@@ -80,6 +117,14 @@ int main(void) {
   //--------------------------------------------------------------------------------------
 
   Term t = term_start();
+  /* font have to be monospace */
+  tFont font;
+  font.base = LoadFont("/usr/share/fonts/TTF/IosevkaNerdFontMono-Bold.ttf");
+  font.size = 36;
+  font.spacing = 2;
+  float font_inc = font.size / font.base.baseSize;
+  font.width = (font.base.recs->width + font.spacing) * font_inc;
+  font.height = (font.base.recs->height + font.spacing) * font_inc;
 
   // Main game loop
   while (!WindowShouldClose()) // Detect window close button or ESC key
@@ -95,16 +140,22 @@ int main(void) {
     //----------------------------------------------------------------------------------
     BeginDrawing();
 
-    ClearBackground(RAYWHITE);
+    ClearBackground(BLACK);
+
+    process_output(t);
+    get_window_size(&screen_height, &screen_width);
 
     // TODO: Draw everything that requires to be drawn at this point:
-    process_output(t);
 
-    DrawText("Congrats! You created your first window!", 190, 200, 20,
-             LIGHTGRAY); // Example
+    char *text =
+        strdup("Congrats! You created your first window! "
+               "fakshfhfjjfjfjfjfjshshdklldiowruoweurowieurwpoierupwoqi"
+               "eurpqwoiuerpoqiw0");
 
+    display_text(screen_width, font, text);
     EndDrawing();
     //----------------------------------------------------------------------------------
+    free(text);
   }
 
   // De-Initialization
