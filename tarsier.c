@@ -81,9 +81,8 @@ int process_output(Term t) {
   return 0;
 }
 
-void display_text(int screen_width, tFont font, char *text) {
+void display_text(int screen_width, int screen_height, tFont font, char *text) {
   int max_chars = screen_width / font.width;
-  // printf("W: %d / Fw: %d = chars: %d\n", w, font_width, max_chars);
 
   char *m = text;
   int row = 0;
@@ -99,7 +98,7 @@ void display_text(int screen_width, tFont font, char *text) {
     text[length] = prev;
     text += length;
     row += font.height;
-  } while (text && *text);
+  } while (text && *text && row <= screen_height);
 }
 
 int main(void) {
@@ -152,7 +151,7 @@ int main(void) {
                "fakshfhfjjfjfjfjfjshshdklldiowruoweurowieurwpoierupwoqi"
                "eurpqwoiuerpoqiw0");
 
-    display_text(screen_width, font, text);
+    display_text(screen_width,screen_height, font, text);
     EndDrawing();
     //----------------------------------------------------------------------------------
     free(text);
