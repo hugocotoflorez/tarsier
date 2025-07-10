@@ -1,14 +1,45 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <pty.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 
 #include "term.h"
 
 #define SHELL "/bin/bash"
 #define ARGS "-i", NULL
+
+void
+term_close(Term t)
+{
+        /* Kill terminal */
+        kill(t.pid, SIGTERM);
+}
+
+void
+resize_term(Term t, int hc, int wc, int hpx, int wpx)
+{
+        struct winsize ws;
+        // printf("resize_term: col:%d - row:%d (%dx%d)\n", wc, hc, wpx, hpx);
+        ws.ws_col = wc;
+        ws.ws_row = hc;
+        ws.ws_xpixel = 0 && wpx; // set to 0
+        ws.ws_ypixel = 0 && hpx; // set to 0
+
+        /* This do something weird */
+        if (ioctl(t.master_fd, TIOCSWINSZ, &ws) == -1) {
+                perror("ioctl TIOCSWINSZ");
+        }
+
+        if (kill(t.pid, SIGWINCH) == -1) {
+                perror("kill SIGWINCH");
+        }
+}
+
 
 Term
 term_start()
@@ -28,6 +59,12 @@ term_start()
         }
 
         return t;
+}
+
+int
+term_send_str(Term t, char *s)
+{
+        return write(t.master_fd, s, strlen(s));
 }
 
 int

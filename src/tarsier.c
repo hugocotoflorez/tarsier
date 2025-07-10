@@ -1,9 +1,13 @@
+#include <assert.h>
+#include <ctype.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 #include "ascii.h"
+#include "sda.h"
 #include "term.h"
 
 #include "../raylib/src/raylib.h"
@@ -29,6 +33,20 @@ typedef enum {
         MOD_ALT = 4,
         MOD_SUPER = 8,
 } ModState;
+
+void
+report(const char *restrict format, ...)
+{
+        char buffer[1024 * 1024];
+        int fd_in, fd_out;
+        FILE *file = fopen("tarsier.log", "a");
+        va_list ap;
+        va_start(ap, format);
+        vfprintf(file, format, ap);
+        fprintf(file, "\n");
+        fclose(file);
+        va_end(ap);
+}
 
 int
 using_no_shift(int kp)
@@ -93,29 +111,94 @@ process_output(Term t)
 }
 
 void
+apply_color(int s, Color *color)
+{
+        switch (s) {
+        case 0:
+                *color = WHITE;
+                break;
+        case 30:
+                *color = BLACK;
+                break;
+        case 31:
+                *color = RED;
+                break;
+        case 32:
+                *color = GREEN;
+                break;
+        case 33:
+                *color = ORANGE;
+                break;
+        case 34:
+                *color = BLUE;
+                break;
+        case 35:
+                *color = MAGENTA;
+                break;
+        case 36:
+                *color = LIME;
+                break;
+        case 37:
+                *color = WHITE;
+                break;
+        }
+        // printf("Aplying color: %d\n", s);
+}
+
+int
+consume_get_int(char **c)
+{
+        // printf("consume_get_int over `%5s` ", *c);
+        int n = 0;
+        while ('0' <= **c && **c <= '9') {
+                n *= 10;
+                n += **c - '0';
+                ++*c;
+        }
+        // printf("-> %d\n", n);
+        return n;
+}
+
+void
+eval_escseq(char **c, Color *color)
+{
+        assert(**c == '\033'); /* Do not call it incorrectly */
+
+        if (memcmp(*c, "\033[", 2) == 0) {
+                // printf("Color format found\n");
+                *c += 1;
+                do {
+                        *c += 1;
+                        apply_color(consume_get_int(c), color);
+                } while (**c == ';');
+        }
+}
+
+void
 display_text(int screen_width, int screen_height, tFont font, char *text)
 {
-        unsigned int max_chars = screen_width / font.width;
-        int row = 0;
-        int length = strlen(text);
+        Vector2 position = { 0, 0 };
+        Color color = GREEN;
+        unsigned int max_chars = screen_width / (font.width + font.spacing);
 
-        /* Todo: improve this, as it's not readable */
-        do {
-                if (max_chars == 0) break;
-                int linesize = length < max_chars ? length : max_chars; // min between remining chars in text and chars per line
-                int nl = strcspn(text, "\n");                           // distance to newline
-                linesize = linesize < nl ? linesize : nl;               // min between prev result and distance to newline
-                {
-                        char prev = text[linesize];
-                        text[linesize] = 0;
-                        DrawTextEx(font.base, text, (Vector2) { 0.0f, (float) row }, font.size, font.spacing, GREEN);
-                        text[linesize] = prev;
+        if (max_chars == 0) abort();
+
+        for (char *c = text; *c; c++) {
+                if (*c == '\033')
+                        eval_escseq(&c, &color);
+                else if (*c == '\n')
+                        position.y += font.height;
+                else if (*c >= ' ' && *c < 127)
+                        DrawTextCodepoint(font.base, *c, position, font.size, color);
+
+                position.x += font.width + font.spacing;
+
+                /* Line overflow at the right -> wrap */
+                if (position.x > max_chars * font.width) {
+                        position.x = 0;
+                        position.y += font.height;
                 }
-                text += linesize;          // set text to start of not-yet-displayed text
-                row += font.height;        // + spacing? // move to next row
-                length -= linesize;        // update text length to avoid call strlen
-                if (*text == '\n') ++text; // avoid loop in \n
-        } while (text && *text && row <= screen_height);
+        }
 }
 
 tFont
@@ -154,6 +237,8 @@ main(void)
         Term t = term_start();
         /* font have to be monospace */
         tFont font = load_font();
+        int a = 0;
+        char text[1024];
 
         // Main game loop
         while (!WindowShouldClose()) // Detect window close button or ESC key
@@ -165,6 +250,13 @@ main(void)
 
                 process_input(t);
 
+                if (IsWindowResized()) {
+                        get_window_size(&screen_height, &screen_width);
+                        unsigned int h = (float) screen_height / (font.height);
+                        unsigned int w = (float) screen_width / (font.width + font.spacing);
+                        resize_term(t, h, w, screen_height, screen_width);
+                }
+
                 // Draw
                 //----------------------------------------------------------------------------------
                 BeginDrawing();
@@ -172,25 +264,23 @@ main(void)
                 ClearBackground(BLACK);
 
                 process_output(t);
-                get_window_size(&screen_height, &screen_width);
 
                 // TODO: Draw everything that requires to be drawn at this point:
 
-                char *text =
-                strdup("Congrats! You created your first window! \n"
-                       "fakshfhfjjfjfjfjfjshshdklldiowruoweurowieurwpoierupwoqi"
-                       "eurpqwoiuerpoqiw0");
-
+                a++;
+                sprintf(text, "%d", a);
                 display_text(screen_width, screen_height, font, text);
+
                 EndDrawing();
                 //----------------------------------------------------------------------------------
-                free(text);
         }
 
         // De-Initialization
         //--------------------------------------------------------------------------------------
 
         // TODO: Unload all loaded resources at this point
+
+        term_close(t);
 
         CloseWindow(); // Close window and OpenGL context
         //--------------------------------------------------------------------------------------
