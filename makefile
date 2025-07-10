@@ -1,11 +1,14 @@
-tarsier: raylib tarsier.o term.o
-	gcc tarsier.o term.o -Lraylib/src/ -lraylib -Wall -Wextra -o tarsier -lm -ggdb
+tarsier: raylib objs/tarsier.o objs/term.o
+	gcc objs/tarsier.o objs/term.o -Lraylib/src/ -lraylib -Wall -Wextra -o tarsier -lm -ggdb
 
-tarsier.o: tarsier.c term.h ascii.h
-	gcc -c tarsier.c -ggdb
+objs/tarsier.o: src/tarsier.c src/term.h src/ascii.h objs
+	gcc -c src/tarsier.c -ggdb -o objs/tarsier.o
 
-term.o: term.c term.h ascii.h
-	gcc -c term.c -ggdb
+objs/term.o: src/term.c src/term.h src/ascii.h objs
+	gcc -c src/term.c -ggdb -o objs/term.o
+
+objs: 
+	mkdir objs
 
 raylib:
 	sudo pacman --needed -S alsa-lib mesa libx11 libxrandr libxi libxcursor libxinerama
