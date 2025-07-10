@@ -4,3 +4,5 @@ tarsier.o
 term.o
 raylib
 objs
+test
+tarsier.log
