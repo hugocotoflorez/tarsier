@@ -16,12 +16,24 @@
 #define FONT_DEFAULT_SIZE "24"
 #define FONT_DEFAULT_SPACING "0"
 
+#define TERM_DEFAULT_COLOR GREEN
+
 typedef struct tFont {
         Font base;
         float width, height;
         float spacing;
         float size;
 } tFont;
+
+typedef struct Context {
+        int screen_width;
+        int screen_height;
+        tFont font;
+        Vector2 position;
+        Color color;
+        unsigned int max_chars;
+
+} Context;
 
 typedef enum {
         MOD_NONE = 0,
@@ -112,7 +124,7 @@ apply_color(int s, Color *color)
 {
         switch (s) {
         case 0:
-                *color = WHITE;
+                *color = TERM_DEFAULT_COLOR;
                 break;
         case 30:
                 *color = BLACK;
@@ -145,14 +157,12 @@ apply_color(int s, Color *color)
 int
 consume_get_int(char **c)
 {
-        // printf("consume_get_int over `%5s` ", *c);
         int n = 0;
         while ('0' <= **c && **c <= '9') {
                 n *= 10;
                 n += **c - '0';
                 ++*c;
         }
-        // printf("-> %d\n", n);
         return n;
 }
 
@@ -162,38 +172,46 @@ eval_escseq(char **c, Color *color)
         assert(**c == '\033'); /* Do not call it incorrectly */
 
         if (memcmp(*c, "\033[", 2) == 0) {
-                // printf("Color format found\n");
-                *c += 1;
+                *c += 2;
                 do {
-                        *c += 1;
                         apply_color(consume_get_int(c), color);
-                } while (**c == ';');
+                } while (**c == ';' && *++*c);
+                if (**c == 'm') {
+                        // Was a color"
+                }
         }
 }
 
 void
-display_text(int screen_width, int screen_height, tFont font, char *text)
+display_append_text(Context *ctx, char *text)
 {
-        Vector2 position = { 0, 0 };
-        Color color = GREEN;
-        unsigned int max_chars = screen_width / (font.width + font.spacing);
-
-        if (max_chars == 0) abort();
+        if (ctx->max_chars == 0) {
+                report("Invalid line size. Aborting\n");
+                abort();
+        };
 
         for (char *c = text; *c; c++) {
-                if (*c == '\033')
-                        eval_escseq(&c, &color);
-                else if (*c == '\n')
-                        position.y += font.height;
-                else if (*c >= ' ' && *c < 127)
-                        DrawTextCodepoint(font.base, *c, position, font.size, color);
+                if (*c == '\033') {
+                        eval_escseq(&c, &ctx->color);
+                        continue;
+                }
 
-                position.x += font.width + font.spacing;
+                else if (*c == '\n') {
+                        ctx->position.x = 0;
+                        ctx->position.y += ctx->font.height;
+                        continue;
+                }
+
+                else if (*c >= ' ' && *c < 127) {
+                        DrawTextCodepoint(ctx->font.base, *c, ctx->position, ctx->font.size, ctx->color);
+                }
+
+                ctx->position.x += ctx->font.width + ctx->font.spacing;
 
                 /* Line overflow at the right -> wrap */
-                if (position.x > max_chars * font.width) {
-                        position.x = 0;
-                        position.y += font.height;
+                if (ctx->position.x >= ctx->max_chars * ctx->font.width) {
+                        ctx->position.x = 0;
+                        ctx->position.y += ctx->font.height;
                 }
         }
 }
@@ -202,9 +220,11 @@ tFont
 load_font()
 {
         tFont font;
+
         HcfOpts opts = hcf_load("_settings.hcf");
         char *fontname = hcf_get_default(opts, "font", "path", FONT_DEFAULT_PATH);
         font.size = atof(hcf_get_default(opts, "font", "size", FONT_DEFAULT_SIZE));
+        assert(font.size > 0);
         font.spacing = atof(hcf_get_default(opts, "font", "spacing", FONT_DEFAULT_SPACING));
         font.base = LoadFont(fontname);
         hcf_destroy(&opts);
@@ -214,6 +234,21 @@ load_font()
         font.height = (font.base.recs->height + font.spacing) * font_inc;
 
         return font;
+}
+
+void
+context_reset_display(Context *ctx)
+{
+        ctx->position = (Vector2) { 0, 0 };
+        ctx->color = TERM_DEFAULT_COLOR;
+}
+
+void
+context_recalc_size(Context *ctx, int screen_height, int screen_width)
+{
+        ctx->screen_width = screen_width;
+        ctx->screen_height = screen_height;
+        ctx->max_chars = screen_width / (ctx->font.width + ctx->font.spacing);
 }
 
 int
@@ -235,7 +270,14 @@ main(void)
         /* font have to be monospace */
         tFont font = load_font();
         int a = 0;
-        char text[1024];
+        char text[1024] = { "\033[31mRED\033[0mRESET\033[34mBLUE\033[37m | Frames: " };
+        char text_len = strlen(text);
+
+        Context ctx = {
+                .font = font,
+        };
+        context_reset_display(&ctx);
+        context_recalc_size(&ctx, screen_height, screen_height);
 
         // Main game loop
         while (!WindowShouldClose()) // Detect window close button or ESC key
@@ -252,6 +294,7 @@ main(void)
                         unsigned int h = (float) screen_height / (font.height);
                         unsigned int w = (float) screen_width / (font.width + font.spacing);
                         resize_term(t, h, w, screen_height, screen_width);
+                        context_recalc_size(&ctx, screen_height, screen_width);
                 }
 
                 // Draw
@@ -264,9 +307,10 @@ main(void)
 
                 // TODO: Draw everything that requires to be drawn at this point:
 
+                context_reset_display(&ctx);
                 a++;
-                sprintf(text, "%d", a);
-                display_text(screen_width, screen_height, font, text);
+                sprintf(text + text_len, "%d", a);
+                display_append_text(&ctx, text);
 
                 EndDrawing();
                 //----------------------------------------------------------------------------------
