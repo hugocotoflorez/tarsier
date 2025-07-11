@@ -13,29 +13,7 @@
 
 #define HCFP_IMPLEMENTATION
 #include "hcfp.h"
-
-#define FONT_DEFAULT_PATH "/usr/share/fonts/gnu-free/FreeMono.otf"
-#define FONT_DEFAULT_SIZE "24"
-#define FONT_DEFAULT_SPACING "0"
-
-#define TERM_DEFAULT_COLOR GREEN
-
-typedef struct tFont {
-        Font base;
-        float width, height;
-        float spacing;
-        float size;
-} tFont;
-
-typedef struct Context {
-        int screen_width;
-        int screen_height;
-        tFont font;
-        Vector2 position;
-        Color color;
-        unsigned int max_chars;
-
-} Context;
+#include "tarsier.h"
 
 typedef enum {
         MOD_NONE = 0,
@@ -124,53 +102,6 @@ process_output(Term t)
         return 0;
 }
 
-void
-apply_color(int s, Color *color)
-{
-        /* clang-format off */
-        switch (s) {
-        case 0:  *color = TERM_DEFAULT_COLOR;   break;
-        case 30: *color = BLACK;                break;
-        case 31: *color = RED;                  break;
-        case 32: *color = GREEN;                break;
-        case 33: *color = ORANGE;               break;
-        case 34: *color = BLUE;                 break;
-        case 35: *color = MAGENTA;              break;
-        case 36: *color = LIME;                 break;
-        case 37: *color = WHITE;                break;
-        }
-        // printf("Aplying color: %d\n", s);
-        /* clang-format on */
-}
-
-int
-consume_get_int(char **c)
-{
-        int n = 0;
-        while ('0' <= **c && **c <= '9') {
-                n *= 10;
-                n += **c - '0';
-                ++*c;
-        }
-        return n;
-}
-
-void
-eval_escseq(char **c, Color *color)
-{
-        assert(**c == '\033'); /* Do not call it incorrectly */
-
-        if (memcmp(*c, "\033[", 2) == 0) {
-                *c += 2;
-                do {
-                        apply_color(consume_get_int(c), color);
-                } while (**c == ';' && *++*c);
-                if (**c == 'm') {
-                        // Was a color"
-                }
-        }
-}
-
 int
 display_append_text(Context *ctx, char *text)
 {
@@ -182,7 +113,7 @@ display_append_text(Context *ctx, char *text)
 
         for (char *c = text; *c; c++) {
                 if (*c == '\033') {
-                        eval_escseq(&c, &ctx->color);
+                        eval_escseq(&c, ctx);
                         continue;
                 }
 
@@ -194,9 +125,9 @@ display_append_text(Context *ctx, char *text)
 
                 else if (*c >= ' ' && *c < 127) {
                         DrawTextCodepoint(ctx->font.base, *c, ctx->position, ctx->font.size, ctx->color);
+                        ctx->position.x += ctx->font.width + ctx->font.spacing;
                 }
 
-                ctx->position.x += ctx->font.width + ctx->font.spacing;
 
                 /* Line overflow at the right -> wrap */
                 if (ctx->position.x >= ctx->max_chars * ctx->font.width) {

@@ -1,14 +1,35 @@
-tarsier: raylib objs/tarsier.o objs/term.o
-	gcc objs/tarsier.o objs/term.o -Lraylib/src/ -lraylib -Wall -Wextra -o tarsier -lm -ggdb
+CC = cc -ggdb -std=gnu99
+INC = -I.
+LIB = -Lraylib/src -lraylib -lm
+HEADERS = $(wildcard src/*.h raylib)
+SRC = $(wildcard src/*.c)
+OBJ = $(patsubst %.c,$(OBJ_DIR)/%.o,$(SRC))
+OBJ_DIR = ./objs
+BUILD_DIR = ./
+OUT = $(BUILD_DIR)/tarsier
 
-objs/tarsier.o: src/tarsier.c src/term.h src/ascii.h objs src/screen_buffer.h
-	gcc -c src/tarsier.c -ggdb -o objs/tarsier.o
+$(OUT): $(OBJ) $(OBJ_DIR) $(BUILD_DIR) wc.md
+	$(CC) $(OBJ) $(INC) $(LIB) -o $(OUT)
 
-objs/term.o: src/term.c src/term.h src/ascii.h objs
-	gcc -c src/term.c -ggdb -o objs/term.o
+wc.md: $(SRC) $(HEADERS)
+	cloc src --by-file --not-match-f='stb_ds\.h' --hide-rate --md > wc.md
 
-objs: 
-	mkdir objs
+$(OBJ_DIR):
+	mkdir -p $(OBJ_DIR)
+
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+$(OBJ_DIR)/%.o: %.c $(HEADERS)
+	mkdir -p $(dir $@) && $(CC) -c $< $(INC) -o $@
+
+clean:
+	rm -rf $(OBJ_DIR)
+
+install: $(OUT) clean
+	mv $(OUT) ~/.local/bin/$(OUT)
+	chmod +x ~/.local/bin/$(OUT)
+
 
 raylib:
 	sudo pacman --needed -S alsa-lib mesa libx11 libxrandr libxi libxcursor libxinerama
