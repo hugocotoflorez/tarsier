@@ -7,6 +7,8 @@
 #include "ascii.h"
 #include "term.h"
 
+#include "screen_buffer.h"
+
 #include "../raylib/src/raylib.h"
 
 #define HCFP_IMPLEMENTATION
@@ -42,6 +44,8 @@ typedef enum {
         MOD_ALT = 4,
         MOD_SUPER = 8,
 } ModState;
+
+Sb screen_buffer = { 0 };
 
 void
 report(const char *restrict format, ...)
@@ -94,7 +98,7 @@ process_input(Term t)
                 if (IsKeyPressed(KEY_TAB)) term_send(t, HT);
                 if (IsKeyPressed(KEY_DELETE)) term_send(t, DEL);
 
-                if (kp >= 0 && kp < 128)
+                if (kp >= ' ' && kp < DEL)
                         term_send(t, kp);
         }
         return 0;
@@ -113,6 +117,7 @@ process_output(Term t)
 {
         char buf[1024];
         while (read_fileno(t.master_fd, buf, sizeof buf)) {
+                sb_append(&screen_buffer, buf);
                 printf("%s", buf);
                 fflush(stdout);
         }
@@ -122,36 +127,20 @@ process_output(Term t)
 void
 apply_color(int s, Color *color)
 {
+        /* clang-format off */
         switch (s) {
-        case 0:
-                *color = TERM_DEFAULT_COLOR;
-                break;
-        case 30:
-                *color = BLACK;
-                break;
-        case 31:
-                *color = RED;
-                break;
-        case 32:
-                *color = GREEN;
-                break;
-        case 33:
-                *color = ORANGE;
-                break;
-        case 34:
-                *color = BLUE;
-                break;
-        case 35:
-                *color = MAGENTA;
-                break;
-        case 36:
-                *color = LIME;
-                break;
-        case 37:
-                *color = WHITE;
-                break;
+        case 0:  *color = TERM_DEFAULT_COLOR;   break;
+        case 30: *color = BLACK;                break;
+        case 31: *color = RED;                  break;
+        case 32: *color = GREEN;                break;
+        case 33: *color = ORANGE;               break;
+        case 34: *color = BLUE;                 break;
+        case 35: *color = MAGENTA;              break;
+        case 36: *color = LIME;                 break;
+        case 37: *color = WHITE;                break;
         }
         // printf("Aplying color: %d\n", s);
+        /* clang-format on */
 }
 
 int
@@ -182,9 +171,10 @@ eval_escseq(char **c, Color *color)
         }
 }
 
-void
+int
 display_append_text(Context *ctx, char *text)
 {
+        if (text == NULL) return 0;
         if (ctx->max_chars == 0) {
                 report("Invalid line size. Aborting\n");
                 abort();
@@ -213,7 +203,12 @@ display_append_text(Context *ctx, char *text)
                         ctx->position.x = 0;
                         ctx->position.y += ctx->font.height;
                 }
+
+                if (ctx->position.y + ctx->font.height > ctx->screen_height) {
+                        return 1; /* Screen overflow */
+                }
         }
+        return 0;
 }
 
 tFont
@@ -239,8 +234,9 @@ load_font()
 void
 context_reset_display(Context *ctx)
 {
-        ctx->position = (Vector2) { 0, 0 };
         ctx->color = TERM_DEFAULT_COLOR;
+        ctx->position.x = 0;
+        ctx->position.y = 0;
 }
 
 void
@@ -287,7 +283,6 @@ main(void)
                 // TODO: Update variables / Implement example logic at this point
                 //----------------------------------------------------------------------------------
 
-                process_input(t);
 
                 if (IsWindowResized()) {
                         get_window_size(&screen_height, &screen_width);
@@ -295,22 +290,33 @@ main(void)
                         unsigned int w = (float) screen_width / (font.width + font.spacing);
                         resize_term(t, h, w, screen_height, screen_width);
                         context_recalc_size(&ctx, screen_height, screen_width);
+                        sb_drop_all(&screen_buffer);
                 }
+
+                process_input(t);
+                process_output(t);
+
 
                 // Draw
                 //----------------------------------------------------------------------------------
                 BeginDrawing();
 
                 ClearBackground(BLACK);
-
-                process_output(t);
+                context_reset_display(&ctx);
 
                 // TODO: Draw everything that requires to be drawn at this point:
 
-                context_reset_display(&ctx);
-                a++;
-                sprintf(text + text_len, "%d", a);
-                display_append_text(&ctx, text);
+                // a++;
+                // sprintf(text + text_len, "%d", a);
+
+                while (display_append_text(&ctx, sb_get(screen_buffer))) {
+                        /* no all text fit in screen */
+                        if (sb_drop_line(&screen_buffer)) {
+                                ClearBackground(BLACK);
+                                context_reset_display(&ctx);
+                        } else
+                                break;
+                }
 
                 EndDrawing();
                 //----------------------------------------------------------------------------------

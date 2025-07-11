@@ -1,7 +1,7 @@
 tarsier: raylib objs/tarsier.o objs/term.o
 	gcc objs/tarsier.o objs/term.o -Lraylib/src/ -lraylib -Wall -Wextra -o tarsier -lm -ggdb
 
-objs/tarsier.o: src/tarsier.c src/term.h src/ascii.h objs
+objs/tarsier.o: src/tarsier.c src/term.h src/ascii.h objs src/screen_buffer.h
 	gcc -c src/tarsier.c -ggdb -o objs/tarsier.o
 
 objs/term.o: src/term.c src/term.h src/ascii.h objs
