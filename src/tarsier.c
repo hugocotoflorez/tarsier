@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 #include <unistd.h>
 
 #include "ascii.h"
@@ -25,19 +26,6 @@ typedef enum {
 
 Sb screen_buffer = { 0 };
 
-void
-report(const char *restrict format, ...)
-{
-        char buffer[1024 * 1024];
-        int fd_in, fd_out;
-        FILE *file = fopen("tarsier.log", "a");
-        va_list ap;
-        va_start(ap, format);
-        vfprintf(file, format, ap);
-        fprintf(file, "\n");
-        fclose(file);
-        va_end(ap);
-}
 
 int
 using_no_shift(int kp)
@@ -102,6 +90,41 @@ process_output(Term t)
         return 0;
 }
 
+/* Convert L lines to y offset in pixels */
+int
+rowoffsetset(Context *ctx, int l)
+{
+        return ctx->position.y = ctx->font.height * l;
+}
+
+/* Convert L lines to x offset in pixels */
+int
+coloffsetset(Context *ctx, int l)
+{
+        return ctx->position.x = (ctx->font.width + ctx->font.spacing) * l;
+}
+
+/* Increment by L lines y offset in pixels */
+int
+rowoffsetinc(Context *ctx, int l)
+{
+        return ctx->position.y += ctx->font.height * l;
+}
+
+/* Increment by L lines x offset in pixels */
+int
+coloffsetinc(Context *ctx, int l)
+{
+        return ctx->position.x += (ctx->font.width + ctx->font.spacing) * l;
+}
+
+void
+print_bg(Context *ctx)
+{
+        DrawRectangle(ctx->position.x, ctx->position.y,
+                      ctx->font.width, ctx->font.height, BLACK);
+}
+
 int
 display_append_text(Context *ctx, char *text)
 {
@@ -114,29 +137,38 @@ display_append_text(Context *ctx, char *text)
         for (char *c = text; *c; c++) {
                 if (*c == '\033') {
                         eval_escseq(&c, ctx);
-                        continue;
                 }
 
                 else if (*c == '\n') {
-                        ctx->position.x = 0;
-                        ctx->position.y += ctx->font.height;
-                        continue;
+                        rowoffsetinc(ctx, 1);
+                        coloffsetset(ctx, 0);
+                }
+
+                else if (*c == '\b') {
+                        /* Si arreglo el texto aqui no se recalcula en cada iteracion */
+                        coloffsetinc(ctx, -1);
+                        print_bg(ctx);
+                        DrawTextCodepoint(ctx->font.base, ' ', ctx->position,
+                                          ctx->font.size, ctx->color);
                 }
 
                 else if (*c >= ' ' && *c < 127) {
-                        DrawTextCodepoint(ctx->font.base, *c, ctx->position, ctx->font.size, ctx->color);
-                        ctx->position.x += ctx->font.width + ctx->font.spacing;
+                        print_bg(ctx);
+                        DrawTextCodepoint(ctx->font.base, *c, ctx->position,
+                                          ctx->font.size, ctx->color);
+                        coloffsetinc(ctx, 1);
                 }
 
 
                 /* Line overflow at the right -> wrap */
                 if (ctx->position.x >= ctx->max_chars * ctx->font.width) {
-                        ctx->position.x = 0;
-                        ctx->position.y += ctx->font.height;
+                        rowoffsetinc(ctx, 1);
+                        coloffsetset(ctx, 0);
                 }
 
+                /* Screen overflow */
                 if (ctx->position.y + ctx->font.height > ctx->screen_height) {
-                        return 1; /* Screen overflow */
+                        return 1;
                 }
         }
         return 0;
@@ -145,6 +177,7 @@ display_append_text(Context *ctx, char *text)
 tFont
 load_font()
 {
+        /* font have to be monospace */
         tFont font;
 
         HcfOpts opts = hcf_load("_settings.hcf");
@@ -165,7 +198,8 @@ load_font()
 void
 context_reset_display(Context *ctx)
 {
-        ctx->color = TERM_DEFAULT_COLOR;
+        ctx->color = TERM_DEFAULT_FG;
+        ctx->bgcolor = TERM_DEFAULT_BG;
         ctx->position.x = 0;
         ctx->position.y = 0;
 }
@@ -194,16 +228,13 @@ main(void)
         //--------------------------------------------------------------------------------------
 
         Term t = term_start();
-        /* font have to be monospace */
         tFont font = load_font();
-        int a = 0;
-        char text[1024] = { "\033[31mRED\033[0mRESET\033[34mBLUE\033[37m | Frames: " };
-        char text_len = strlen(text);
-
-        Context ctx = {
-                .font = font,
-        };
+        Context ctx = { .font = font };
         context_reset_display(&ctx);
+
+        unsigned int h = (float) screen_height / (font.height);
+        unsigned int w = (float) screen_width / (font.width + font.spacing);
+        resize_term(t, h, w, screen_height, screen_width);
         context_recalc_size(&ctx, screen_height, screen_height);
 
         // Main game loop
@@ -213,7 +244,6 @@ main(void)
                 //----------------------------------------------------------------------------------
                 // TODO: Update variables / Implement example logic at this point
                 //----------------------------------------------------------------------------------
-
 
                 if (IsWindowResized()) {
                         get_window_size(&screen_height, &screen_width);
@@ -237,11 +267,8 @@ main(void)
 
                 // TODO: Draw everything that requires to be drawn at this point:
 
-                // a++;
-                // sprintf(text + text_len, "%d", a);
-
                 while (display_append_text(&ctx, sb_get(screen_buffer))) {
-                        /* no all text fit in screen */
+                        /* not all text fit in screen */
                         if (sb_drop_line(&screen_buffer)) {
                                 ClearBackground(BLACK);
                                 context_reset_display(&ctx);

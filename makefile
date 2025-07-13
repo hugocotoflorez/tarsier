@@ -8,8 +8,9 @@ OBJ_DIR = ./objs
 BUILD_DIR = ./
 OUT = $(BUILD_DIR)/tarsier
 
-$(OUT): $(OBJ) $(OBJ_DIR) $(BUILD_DIR) wc.md
+$(OUT): $(OBJ) $(OBJ_DIR) $(BUILD_DIR) wc.md 
 	$(CC) $(OBJ) $(INC) $(LIB) -o $(OUT)
+	rm tarsier.log -f && touch tarsier.log
 
 wc.md: $(SRC) $(HEADERS)
 	cloc src --by-file --not-match-f='stb_ds\.h' --hide-rate --md > wc.md
@@ -39,3 +40,4 @@ raylib:
 
 documentation:
 	wget https://gist.githubusercontent.com/justinmk/a5102f9a0c1810437885a04a07ef0a91/raw/b66b17a605590afbd725c092b0cdc58e15d461a2/XTerm-Control-Sequences.txt
+	wget https://gist.githubusercontent.com/fnky/458719343aabd01cfb17a3a4f7296797/raw/9363ac8dd0aa6ef00a85b042f62227395ef67ae2/ANSI.md

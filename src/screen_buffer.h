@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 typedef struct Sb {
         size_t capacity;
@@ -17,6 +18,7 @@ char *sb_get(Sb s);                // return a string of the full screen
 int sb_drop_line(Sb *s);           // forget the first line and return !0. If there is only one line, return 0.
 void sb_append(Sb *s, char *data); // append DATA to S
 void sb_drop_all(Sb *s);           // Set data in S no empty string
+void sb_drop_char(Sb *s, int i);   // Delete a single char
 
 
 #ifndef DYNAMIC_ARRAY_H
@@ -167,6 +169,16 @@ sb_drop_all(Sb *s)
         if (s->data) {
                 *s->data = 0;
                 s->size = 0;
+        }
+}
+
+void
+sb_drop_char(Sb *s, int i)
+{
+        if (s->data && *s->data)
+        {
+                assert(s->data[i]);
+                da_remove(s, i);
         }
 }
 

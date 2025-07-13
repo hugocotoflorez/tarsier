@@ -5,11 +5,11 @@ File|blank|comment|code
 :-------|-------:|-------:|-------:
 src/hcfp.h|101|62|328
 src/ascii.h|5|1|268
-src/tarsier.c|51|20|196
-src/screen_buffer.h|24|20|129
+src/escseq.c|43|22|217
+src/tarsier.c|55|24|215
+src/screen_buffer.h|25|20|140
 src/term.c|15|33|72
-src/escseq.c|7|4|42
-src/tarsier.h|8|0|23
+src/tarsier.h|12|0|43
 src/term.h|3|0|13
 --------|--------|--------|--------
-SUM:|214|140|1071
+SUM:|259|162|1296
