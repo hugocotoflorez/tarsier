@@ -35,6 +35,7 @@ apply_color(int c, Color *fg, Color *bg)
         case 106: case 46: *bg = LIME;    break;
         case 107: case 47: *bg = WHITE;   break;
 
+/* TODO */
 /*ESC Code Sequence | Reset Sequence | Description                                                |
 | ----------------- | -------------- | ---------------------------------------------------------- |
 | `ESC[1;34;{...}m` |                | Set graphics modes for cell, separated by semicolon (`;`). |
@@ -146,6 +147,8 @@ move_cursor_to(Immd data, Context *ctx)
         int line = data.n;
         int column;
 
+        /* 0 is == 1? should it? */
+
         /* Only two arguments can be provided */
         if (data.next && data.next->next && !data.next->next->next) {
                 column = data.next->n;
@@ -165,8 +168,32 @@ move_cursor_to(Immd data, Context *ctx)
 }
 
 void
-erase(char **c, Context *ctx)
+erase(Immd n, char **c, Context *ctx){
+        switch (**c) {
+                case 'J':
+                        if (n.n == 0) erase_end_screen(ctx);
+                        if (n.n == 1) erase_begin_screen(ctx);
+                        if (n.n == 2) erase_screen(ctx);
+                        if (n.n == 3) erase_saved_lines(ctx);
+                        break;
+                case 'K':
+                        if (n.n == 0) erase_end_line(ctx);
+                        if (n.n == 1) erase_begin_line(ctx);
+                        if (n.n == 2) erase_line(ctx);
+                        break;
+        }
 {
+/*ESC Code Sequence | Description                               |
+| :---------------- | :---------------------------------------- |
+| `ESC[J`           | erase in display (same as `ESC[0J`)       |
+| `ESC[0J`          | erase from cursor until end of screen     |
+| `ESC[1J`          | erase from cursor to beginning of screen  |
+| `ESC[2J`          | erase entire screen                       |
+| `ESC[3J`          | erase saved lines                         |
+| `ESC[K`           | erase in line (same as `ESC[0K`)          |
+| `ESC[0K`          | erase from cursor to end of line          |
+| `ESC[1K`          | erase start of line to the cursor         |
+| `ESC[2K`          | erase the entire line                    */
 }
 
 void
@@ -240,7 +267,7 @@ eval_escseq(char **c, Context *ctx)
 
                 case 'J':
                 case 'K':
-                        erase(c, ctx);
+                        erase(data, c, ctx);
                         break;
 
                 default:

@@ -31,7 +31,7 @@ typedef struct Context {
 } Context;
 
 static void
-report(const char * format, ...)
+report(const char *format, ...)
 {
         char buffer[1024 * 1024];
         int fd_in, fd_out;
@@ -47,9 +47,17 @@ report(const char * format, ...)
 void eval_escseq(char **c, Context *ctx);
 
 
-int rowoffsetset(Context *ctx, int l) ; /* Convert L lines to y offset in pixels */
-int coloffsetset(Context *ctx, int l) ; /* Convert L lines to x offset in pixels */
-int rowoffsetinc(Context *ctx, int l) ; /* Increment by L lines to y offset in pixels */
-int coloffsetinc(Context *ctx, int l) ; /* Convert L lines to x offset in pixels */
+int rowoffsetset(Context *ctx, int l); /* Convert L lines to y offset in pixels */
+int coloffsetset(Context *ctx, int l); /* Convert L lines to x offset in pixels */
+int rowoffsetinc(Context *ctx, int l); /* Increment by L lines to y offset in pixels */
+int coloffsetinc(Context *ctx, int l); /* Convert L lines to x offset in pixels */
+
+void erase_end_screen(Context *ctx);
+void erase_begin_screen(Context *ctx);
+void erase_screen(Context *ctx);
+void erase_saved_lines(Context *ctx);
+void erase_end_line(Context *ctx);
+void erase_begin_line(Context *ctx);
+void erase_line(Context *ctx);
 
 #endif // TARSIER_H

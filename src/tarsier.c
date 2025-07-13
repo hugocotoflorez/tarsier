@@ -122,7 +122,7 @@ void
 print_bg(Context *ctx)
 {
         DrawRectangle(ctx->position.x, ctx->position.y,
-                      ctx->font.width, ctx->font.height, BLACK);
+                      ctx->font.width, ctx->font.height, ctx->bgcolor);
 }
 
 int
@@ -212,18 +212,67 @@ context_recalc_size(Context *ctx, int screen_height, int screen_width)
         ctx->max_chars = screen_width / (ctx->font.width + ctx->font.spacing);
 }
 
+void
+erase_end_screen(Context *ctx)
+{
+        /* Todo */
+        DrawRectangle(ctx->position.x, ctx->position.y,
+                      ctx->font.width, ctx->font.height, ctx->bgcolor);
+}
+
+void
+erase_begin_screen(Context *ctx)
+{
+        /* Todo */
+        DrawRectangle(ctx->position.x, ctx->position.y,
+                      ctx->font.width, ctx->font.height, ctx->bgcolor);
+}
+
+void
+erase_screen(Context *ctx)
+{
+        DrawRectangle(0, 0, ctx->screen_width, ctx->screen_height, ctx->bgcolor);
+}
+
+void
+erase_saved_lines(Context *ctx)
+{
+        /* Todo */
+        DrawRectangle(ctx->position.x, ctx->position.y, ctx->font.width, ctx->font.height, ctx->bgcolor);
+}
+
+void
+erase_end_line(Context *ctx)
+{
+        /* To check */
+        DrawRectangle(ctx->position.x, ctx->position.y, ctx->screen_width - ctx->font.width, ctx->font.height, ctx->bgcolor);
+}
+
+void
+erase_begin_line(Context *ctx)
+{
+        /* should erase 1 more char? */
+        DrawRectangle(0, ctx->position.y, ctx->position.x, ctx->font.height, ctx->bgcolor);
+}
+
+void
+erase_line(Context *ctx)
+{
+        DrawRectangle(0, ctx->position.y, ctx->screen_width, ctx->font.height, ctx->bgcolor);
+}
+
 int
 main(void)
 {
         int screen_height = 800;
-        int screen_width = 450;
+        int screen_width = 600;
 
         InitWindow(screen_width, screen_height, "Tarsier terminal emulator");
 
         // TODO: Load resources / Initialize variables at this point
 
         SetTargetFPS(30);
-        SetWindowState(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
+        SetWindowState(FLAG_VSYNC_HINT | FLAG_BORDERLESS_WINDOWED_MODE);
         SetExitKey(KEY_NULL);
         //--------------------------------------------------------------------------------------
 
