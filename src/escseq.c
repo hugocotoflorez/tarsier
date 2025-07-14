@@ -17,23 +17,23 @@ apply_color(int c, Color *fg, Color *bg)
                 *bg = TERM_DEFAULT_BG;   
                 break;
 
-        case 90: case 30: *fg = BLACK;    break;
-        case 91: case 31: *fg = RED;      break;
-        case 92: case 32: *fg = GREEN;    break;
-        case 93: case 33: *fg = ORANGE;   break;
-        case 94: case 34: *fg = BLUE;     break;
-        case 95: case 35: *fg = MAGENTA;  break;
-        case 96: case 36: *fg = LIME;     break;
-        case 97: case 37: *fg = WHITE;    break;
+        case 90: case 30: *fg = color_lookup[0]; break;
+        case 91: case 31: *fg = color_lookup[1]; break;
+        case 92: case 32: *fg = color_lookup[2]; break;
+        case 93: case 33: *fg = color_lookup[3]; break;
+        case 94: case 34: *fg = color_lookup[4]; break;
+        case 95: case 35: *fg = color_lookup[5]; break;
+        case 96: case 36: *fg = color_lookup[6]; break;
+        case 97: case 37: *fg = color_lookup[7]; break;
 
-        case 100: case 40: *bg = BLACK;   break;
-        case 101: case 41: *bg = RED;     break;
-        case 102: case 42: *bg = GREEN;   break;
-        case 103: case 43: *bg = ORANGE;  break;
-        case 104: case 44: *bg = BLUE;    break;
-        case 105: case 45: *bg = MAGENTA; break;
-        case 106: case 46: *bg = LIME;    break;
-        case 107: case 47: *bg = WHITE;   break;
+        case 100: case 40: *bg = color_lookup[0]; break;
+        case 101: case 41: *bg = color_lookup[1]; break;
+        case 102: case 42: *bg = color_lookup[2]; break;
+        case 103: case 43: *bg = color_lookup[3]; break;
+        case 104: case 44: *bg = color_lookup[4]; break;
+        case 105: case 45: *bg = color_lookup[5]; break;
+        case 106: case 46: *bg = color_lookup[6]; break;
+        case 107: case 47: *bg = color_lookup[7]; break;
 
 /* TODO */
 /*ESC Code Sequence | Reset Sequence | Description                                                |
@@ -182,7 +182,6 @@ erase(Immd n, char **c, Context *ctx){
                         if (n.n == 2) erase_line(ctx);
                         break;
         }
-{
 /*ESC Code Sequence | Description                               |
 | :---------------- | :---------------------------------------- |
 | `ESC[J`           | erase in display (same as `ESC[0J`)       |

@@ -122,7 +122,7 @@ void
 print_bg(Context *ctx)
 {
         DrawRectangle(ctx->position.x, ctx->position.y,
-                      ctx->font.width, ctx->font.height, ctx->bgcolor);
+                      ctx->font.width + ctx->font.spacing, ctx->font.height, ctx->bgcolor);
 }
 
 int
@@ -180,7 +180,7 @@ load_font()
         /* font have to be monospace */
         tFont font;
 
-        HcfOpts opts = hcf_load("_settings.hcf");
+        HcfOpts opts = hcf_load("settings.hcf");
         char *fontname = hcf_get_default(opts, "font", "path", FONT_DEFAULT_PATH);
         font.size = atof(hcf_get_default(opts, "font", "size", FONT_DEFAULT_SIZE));
         assert(font.size > 0);
@@ -215,17 +215,13 @@ context_recalc_size(Context *ctx, int screen_height, int screen_width)
 void
 erase_end_screen(Context *ctx)
 {
-        /* Todo */
-        DrawRectangle(ctx->position.x, ctx->position.y,
-                      ctx->font.width, ctx->font.height, ctx->bgcolor);
+        DrawRectangle(ctx->position.x, ctx->position.y, ctx->screen_width - ctx->position.x, ctx->screen_height - ctx->position.y, ctx->bgcolor);
 }
 
 void
 erase_begin_screen(Context *ctx)
 {
-        /* Todo */
-        DrawRectangle(ctx->position.x, ctx->position.y,
-                      ctx->font.width, ctx->font.height, ctx->bgcolor);
+        DrawRectangle(0, 0, ctx->position.x, ctx->position.y, ctx->bgcolor);
 }
 
 void
@@ -237,8 +233,7 @@ erase_screen(Context *ctx)
 void
 erase_saved_lines(Context *ctx)
 {
-        /* Todo */
-        DrawRectangle(ctx->position.x, ctx->position.y, ctx->font.width, ctx->font.height, ctx->bgcolor);
+        assert("Wtf is this" && 0);
 }
 
 void
@@ -279,12 +274,15 @@ main(void)
         Term t = term_start();
         tFont font = load_font();
         Context ctx = { .font = font };
+
+        get_default_colors();
         context_reset_display(&ctx);
 
         unsigned int h = (float) screen_height / (font.height);
         unsigned int w = (float) screen_width / (font.width + font.spacing);
         resize_term(t, h, w, screen_height, screen_width);
         context_recalc_size(&ctx, screen_height, screen_height);
+
 
         // Main game loop
         while (!WindowShouldClose()) // Detect window close button or ESC key
@@ -311,7 +309,7 @@ main(void)
                 //----------------------------------------------------------------------------------
                 BeginDrawing();
 
-                ClearBackground(BLACK);
+                ClearBackground(TERM_DEFAULT_BG);
                 context_reset_display(&ctx);
 
                 // TODO: Draw everything that requires to be drawn at this point:
@@ -319,7 +317,7 @@ main(void)
                 while (display_append_text(&ctx, sb_get(screen_buffer))) {
                         /* not all text fit in screen */
                         if (sb_drop_line(&screen_buffer)) {
-                                ClearBackground(BLACK);
+                                ClearBackground(TERM_DEFAULT_BG);
                                 context_reset_display(&ctx);
                         } else
                                 break;

@@ -1,6 +1,19 @@
 font:
-        path    /usr/share/fonts/gnu-free/FreeMono.otf
-        size    24
-        spacing 4
+        path    /usr/share/fonts/Iosevka/IosevkaNerdFontMono-Medium.ttf
+        size    36
+        spacing 0
+
+colors:
+        background      #424751
+        foreground      #f0f0f0      
+        color0          #424751
+        color1          #ffa3b6
+        color2          #d7ffbd
+        color3          #ffffbd
+        color4          #accfff
+        color5          #d6d6ff
+        color6          #dbeaff
+        color7          #f0f0f0
+
 
 

@@ -69,6 +69,8 @@ char *hcf_get_value(HcfField field, const char *key);
 /* Get a value given a field name and the options data structure */
 char *hcf_get(HcfOpts opts, const char *field, const char *key);
 
+char * hcf_get_default(HcfOpts opts, const char *field, const char *key, char *def);
+
 /* Manually add a value */
 void hcf_add(HcfField *field, const char *key, char *value);
 

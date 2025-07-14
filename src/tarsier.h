@@ -9,8 +9,11 @@
 #define FONT_DEFAULT_SIZE "24"
 #define FONT_DEFAULT_SPACING "0"
 
-#define TERM_DEFAULT_FG GREEN
-#define TERM_DEFAULT_BG BLUE
+/* defined in getcolor.c */
+extern Color TERM_DEFAULT_FG;
+extern Color TERM_DEFAULT_BG;
+extern Color color_lookup[];
+void get_default_colors();
 
 typedef struct tFont {
         Font base;
