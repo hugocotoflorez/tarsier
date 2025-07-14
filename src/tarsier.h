@@ -5,30 +5,51 @@
 
 #include "../raylib/src/raylib.h"
 
-#define FONT_DEFAULT_PATH "/usr/share/fonts/gnu-free/FreeMono.otf"
+#define FONT_DEFAULT_PATH_BASE "/usr/share/fonts/gnu-free/FreeMono.otf"
+#define FONT_DEFAULT_PATH_BOLD "/usr/share/fonts/gnu-free/FreeMonoBold.otf"
+#define FONT_DEFAULT_PATH_ITALIC "/usr/share/fonts/gnu-free/FreeMonoOblique.otf"
+#define FONT_DEFAULT_PATH_BOLD_ITALIC "/usr/share/fonts/gnu-free/FreeMonoBoldOblique.otf"
 #define FONT_DEFAULT_SIZE "24"
 #define FONT_DEFAULT_SPACING "0"
 
 /* defined in getcolor.c */
 extern Color TERM_DEFAULT_FG;
 extern Color TERM_DEFAULT_BG;
+extern Color TERM_DEFAULT_CURSOR;
 extern Color color_lookup[];
 void get_default_colors();
 
 typedef struct tFont {
         Font base;
+        Font bold;
+        Font italic;
+        Font bold_italic;
         float width, height;
         float spacing;
         float size;
 } tFont;
+
+typedef enum {
+        TM_NORMAL = 0,
+        TM_BOLD = 1,
+        TM_DIM = 2,
+        TM_ITALIC = 4,
+        TM_UNDERLINE = 8,
+        TM_BLINKING = 16,
+        TM_INVERSE = 32,
+        TM_HIDDEN = 64,
+        TM_STRIKETHROUGH = 128,
+} TextMode;
 
 typedef struct Context {
         int screen_width;
         int screen_height;
         tFont font;
         Vector2 position;
-        Color color;
+        Color fgcolor;
         Color bgcolor;
+        Color cursor_color;
+        TextMode text_mode;
         unsigned int max_chars;
 
 } Context;

@@ -7,7 +7,6 @@
 
 #define COLOR_DEFAULT_BG "#0000FF"
 #define COLOR_DEFAULT_FG "#FFFFFF"
-
 #define COLOR_DEFAULT_BLACK "#000000"
 #define COLOR_DEFAULT_RED "#FF0000"
 #define COLOR_DEFAULT_GREEN "#00FF00"
@@ -16,6 +15,7 @@
 #define COLOR_DEFAULT_MAGENTA "#FF00FF"
 #define COLOR_DEFAULT_CYAN "#00FFFF"
 #define COLOR_DEFAULT_WHITE "#FFFFFF"
+#define COLOR_DEFAULT_CURSOR "#FFFFFF"
 
 Color color_lookup[8] = {
         /* [0] = Color for black */
@@ -25,6 +25,7 @@ Color color_lookup[8] = {
 
 Color TERM_DEFAULT_FG;
 Color TERM_DEFAULT_BG;
+Color TERM_DEFAULT_CURSOR;
 
 char *
 rtrim(char *s)
@@ -80,17 +81,19 @@ get_default_colors()
 
         char *bg = hcf_get_default(opts, "colors", "background", COLOR_DEFAULT_BG);
         char *fg = hcf_get_default(opts, "colors", "foreground", COLOR_DEFAULT_FG);
+        char *cur = hcf_get_default(opts, "colors", "cursor", COLOR_DEFAULT_CURSOR);
         char *c0 = hcf_get_default(opts, "colors", "color0", COLOR_DEFAULT_BLACK);
         char *c1 = hcf_get_default(opts, "colors", "color1", COLOR_DEFAULT_RED);
         char *c2 = hcf_get_default(opts, "colors", "color2", COLOR_DEFAULT_GREEN);
-        char *c4 = hcf_get_default(opts, "colors", "color3", COLOR_DEFAULT_YELLOW);
-        char *c3 = hcf_get_default(opts, "colors", "color4", COLOR_DEFAULT_BLUE);
+        char *c3 = hcf_get_default(opts, "colors", "color3", COLOR_DEFAULT_YELLOW);
+        char *c4 = hcf_get_default(opts, "colors", "color4", COLOR_DEFAULT_BLUE);
         char *c5 = hcf_get_default(opts, "colors", "color5", COLOR_DEFAULT_MAGENTA);
         char *c6 = hcf_get_default(opts, "colors", "color6", COLOR_DEFAULT_CYAN);
         char *c7 = hcf_get_default(opts, "colors", "color7", COLOR_DEFAULT_WHITE);
 
         TERM_DEFAULT_BG = hex_to_Color(bg);
         TERM_DEFAULT_FG = hex_to_Color(fg);
+        TERM_DEFAULT_CURSOR = hex_to_Color(cur);
         color_lookup[0] = hex_to_Color(c0);
         color_lookup[1] = hex_to_Color(c1);
         color_lookup[2] = hex_to_Color(c2);

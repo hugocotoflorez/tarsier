@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <threads.h>
 #include <unistd.h>
 
@@ -17,11 +16,11 @@
 #include "tarsier.h"
 
 typedef enum {
-        MOD_NONE = 0,
-        MOD_SHIFT = 1,
-        MOD_CONTROL = 2,
-        MOD_ALT = 4,
-        MOD_SUPER = 8,
+        MS_NONE = 0,
+        MS_SHIFT = 1,
+        MS_CONTROL = 2,
+        MS_ALT = 4,
+        MS_SUPER = 8,
 } ModState;
 
 Sb screen_buffer = { 0 };
@@ -43,20 +42,32 @@ using_shilf(int kp)
         return kp;
 }
 
+int
+using_control(int kp)
+{
+        if (64 <= kp && kp <= 94) {
+                printf("CONTROL %c\n", kp);
+                return kp - 64;
+        }
+        return kp;
+}
+
+
 #define IsModDown(MOD) (IsKeyDown(KEY_LEFT_##MOD) || IsKeyDown(KEY_RIGHT_##MOD))
 
 int
 process_input(Term t)
 {
         ModState state = 0;
-        if (IsModDown(SHIFT)) state |= MOD_SHIFT;
-        if (IsModDown(CONTROL)) state |= MOD_CONTROL;
-        if (IsModDown(ALT)) state |= MOD_ALT;
-        if (IsModDown(SUPER)) state |= MOD_SUPER;
+        if (IsModDown(SHIFT)) state |= MS_SHIFT;
+        if (IsModDown(CONTROL)) state |= MS_CONTROL;
+        if (IsModDown(ALT)) state |= MS_ALT;
+        if (IsModDown(SUPER)) state |= MS_SUPER;
 
         int kp;
         while ((kp = GetKeyPressed())) {
-                kp = (state & MOD_SHIFT) ? using_shilf(kp) : using_no_shift(kp);
+                kp = (state & MS_CONTROL) ? using_control(kp) : kp;
+                kp = (state & MS_SHIFT) ? using_shilf(kp) : using_no_shift(kp);
 
                 if (IsKeyPressed(KEY_ENTER)) term_send(t, LF);
                 if (IsKeyPressed(KEY_ESCAPE)) term_send(t, ESC);
@@ -64,8 +75,7 @@ process_input(Term t)
                 if (IsKeyPressed(KEY_TAB)) term_send(t, HT);
                 if (IsKeyPressed(KEY_DELETE)) term_send(t, DEL);
 
-                if (kp >= ' ' && kp < DEL)
-                        term_send(t, kp);
+                if (kp <= 127) term_send(t, kp);
         }
         return 0;
 }
@@ -134,6 +144,15 @@ display_append_text(Context *ctx, char *text)
                 abort();
         };
 
+        Font font = ctx->font.base;
+
+        if (ctx->text_mode & TM_BOLD & TM_ITALIC)
+                font = ctx->font.bold_italic;
+        else if (ctx->text_mode & TM_BOLD)
+                font = ctx->font.bold;
+        else if (ctx->text_mode & TM_ITALIC)
+                font = ctx->font.italic;
+
         for (char *c = text; *c; c++) {
                 if (*c == '\033') {
                         eval_escseq(&c, ctx);
@@ -149,13 +168,13 @@ display_append_text(Context *ctx, char *text)
                         coloffsetinc(ctx, -1);
                         print_bg(ctx);
                         DrawTextCodepoint(ctx->font.base, ' ', ctx->position,
-                                          ctx->font.size, ctx->color);
+                                          ctx->font.size, ctx->fgcolor);
                 }
 
                 else if (*c >= ' ' && *c < 127) {
                         print_bg(ctx);
                         DrawTextCodepoint(ctx->font.base, *c, ctx->position,
-                                          ctx->font.size, ctx->color);
+                                          ctx->font.size, ctx->fgcolor);
                         coloffsetinc(ctx, 1);
                 }
 
@@ -181,11 +200,17 @@ load_font()
         tFont font;
 
         HcfOpts opts = hcf_load("settings.hcf");
-        char *fontname = hcf_get_default(opts, "font", "path", FONT_DEFAULT_PATH);
+        char *base = hcf_get_default(opts, "font", "base", FONT_DEFAULT_PATH_BASE);
+        char *italic = hcf_get_default(opts, "font", "italic", FONT_DEFAULT_PATH_ITALIC);
+        char *bold = hcf_get_default(opts, "font", "bold", FONT_DEFAULT_PATH_BOLD);
+        char *bold_italic = hcf_get_default(opts, "font", "bold-italic", FONT_DEFAULT_PATH_BOLD_ITALIC);
         font.size = atof(hcf_get_default(opts, "font", "size", FONT_DEFAULT_SIZE));
         assert(font.size > 0);
         font.spacing = atof(hcf_get_default(opts, "font", "spacing", FONT_DEFAULT_SPACING));
-        font.base = LoadFont(fontname);
+        font.base = LoadFont(base);
+        font.bold = LoadFont(bold);
+        font.italic = LoadFont(italic);
+        font.bold_italic = LoadFont(bold_italic);
         hcf_destroy(&opts);
 
         float font_inc = font.size / font.base.baseSize;
@@ -198,8 +223,9 @@ load_font()
 void
 context_reset_display(Context *ctx)
 {
-        ctx->color = TERM_DEFAULT_FG;
+        ctx->fgcolor = TERM_DEFAULT_FG;
         ctx->bgcolor = TERM_DEFAULT_BG;
+        ctx->text_mode = TM_NORMAL;
         ctx->position.x = 0;
         ctx->position.y = 0;
 }
@@ -256,6 +282,14 @@ erase_line(Context *ctx)
         DrawRectangle(0, ctx->position.y, ctx->screen_width, ctx->font.height, ctx->bgcolor);
 }
 
+void
+print_cursor(Context *ctx)
+{
+        DrawRectangle(ctx->position.x, ctx->position.y,
+                      ctx->font.width + ctx->font.spacing,
+                      ctx->font.height, TERM_DEFAULT_CURSOR);
+}
+
 int
 main(void)
 {
@@ -267,7 +301,7 @@ main(void)
         // TODO: Load resources / Initialize variables at this point
 
         SetTargetFPS(30);
-        SetWindowState(FLAG_VSYNC_HINT | FLAG_BORDERLESS_WINDOWED_MODE);
+        SetWindowState(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE );
         SetExitKey(KEY_NULL);
         //--------------------------------------------------------------------------------------
 
@@ -322,6 +356,8 @@ main(void)
                         } else
                                 break;
                 }
+
+                print_cursor(&ctx);
 
                 EndDrawing();
                 //----------------------------------------------------------------------------------

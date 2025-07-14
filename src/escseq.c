@@ -6,49 +6,57 @@
 
 #include "tarsier.h"
 
+typedef struct Immediate {
+        int n;
+        struct Immediate *next;
+} Immd;
 
 void
-apply_color(int c, Color *fg, Color *bg)
+apply_color(int c, Context *ctx)
 {
         /* clang-format off */
         switch (c) {
         case 0:  
-                *fg = TERM_DEFAULT_FG;   
-                *bg = TERM_DEFAULT_BG;   
+                ctx->fgcolor = TERM_DEFAULT_FG;   
+                ctx->bgcolor = TERM_DEFAULT_BG;   
+                ctx->text_mode = TM_NORMAL;
                 break;
 
-        case 90: case 30: *fg = color_lookup[0]; break;
-        case 91: case 31: *fg = color_lookup[1]; break;
-        case 92: case 32: *fg = color_lookup[2]; break;
-        case 93: case 33: *fg = color_lookup[3]; break;
-        case 94: case 34: *fg = color_lookup[4]; break;
-        case 95: case 35: *fg = color_lookup[5]; break;
-        case 96: case 36: *fg = color_lookup[6]; break;
-        case 97: case 37: *fg = color_lookup[7]; break;
+        case  90: case 30: ctx->fgcolor = color_lookup[0];      break;
+        case  91: case 31: ctx->fgcolor = color_lookup[1];      break;
+        case  92: case 32: ctx->fgcolor = color_lookup[2];      break;
+        case  93: case 33: ctx->fgcolor = color_lookup[3];      break;
+        case  94: case 34: ctx->fgcolor = color_lookup[4];      break;
+        case  95: case 35: ctx->fgcolor = color_lookup[5];      break;
+        case  96: case 36: ctx->fgcolor = color_lookup[6];      break;
+        case  97: case 37: ctx->fgcolor = color_lookup[7];      break;
 
-        case 100: case 40: *bg = color_lookup[0]; break;
-        case 101: case 41: *bg = color_lookup[1]; break;
-        case 102: case 42: *bg = color_lookup[2]; break;
-        case 103: case 43: *bg = color_lookup[3]; break;
-        case 104: case 44: *bg = color_lookup[4]; break;
-        case 105: case 45: *bg = color_lookup[5]; break;
-        case 106: case 46: *bg = color_lookup[6]; break;
-        case 107: case 47: *bg = color_lookup[7]; break;
+        case 100: case 40: ctx->bgcolor = color_lookup[0];      break;
+        case 101: case 41: ctx->bgcolor = color_lookup[1];      break;
+        case 102: case 42: ctx->bgcolor = color_lookup[2];      break;
+        case 103: case 43: ctx->bgcolor = color_lookup[3];      break;
+        case 104: case 44: ctx->bgcolor = color_lookup[4];      break;
+        case 105: case 45: ctx->bgcolor = color_lookup[5];      break;
+        case 106: case 46: ctx->bgcolor = color_lookup[6];      break;
+        case 107: case 47: ctx->bgcolor = color_lookup[7];      break;
 
-/* TODO */
-/*ESC Code Sequence | Reset Sequence | Description                                                |
-| ----------------- | -------------- | ---------------------------------------------------------- |
-| `ESC[1;34;{...}m` |                | Set graphics modes for cell, separated by semicolon (`;`). |
-| `ESC[0m`          |                | reset all modes (styles and colors)                        |
-| `ESC[1m`          | `ESC[22m`      | set bold mode.                                             |
-| `ESC[2m`          | `ESC[22m`      | set dim/faint mode.                                        |
-| `ESC[3m`          | `ESC[23m`      | set italic mode.                                           |
-| `ESC[4m`          | `ESC[24m`      | set underline mode.                                        |
-| `ESC[5m`          | `ESC[25m`      | set blinking mode                                          |
-| `ESC[7m`          | `ESC[27m`      | set inverse/reverse mode                                   |
-| `ESC[8m`          | `ESC[28m`      | set hidden/invisible mode                                  |
-| `ESC[9m`          | `ESC[29m`      | set strikethrough mode.                                   */
+        case   1: ctx->text_mode |=  TM_BOLD;                   break; 
+        case   2: ctx->text_mode |=  TM_DIM;                    break; 
+        case   3: ctx->text_mode |=  TM_ITALIC;                 break; 
+        case   4: ctx->text_mode |=  TM_UNDERLINE;              break; 
+        case   5: ctx->text_mode |=  TM_BLINKING;               break; 
+        case   7: ctx->text_mode |=  TM_INVERSE;                break; 
+        case   8: ctx->text_mode |=  TM_HIDDEN;                 break; 
+        case   9: ctx->text_mode |=  TM_STRIKETHROUGH;          break; 
 
+        case  21: ctx->text_mode &=~ TM_BOLD;                   break; 
+        case  22: ctx->text_mode &=~ TM_DIM;                    break; 
+        case  23: ctx->text_mode &=~ TM_ITALIC;                 break; 
+        case  24: ctx->text_mode &=~ TM_UNDERLINE;              break; 
+        case  25: ctx->text_mode &=~ TM_BLINKING;               break; 
+        case  27: ctx->text_mode &=~ TM_INVERSE;                break; 
+        case  28: ctx->text_mode &=~ TM_HIDDEN;                 break; 
+        case  29: ctx->text_mode &=~ TM_STRIKETHROUGH;          break; 
         }
         /* clang-format on */
 }
@@ -72,16 +80,12 @@ save_cursor(Context *ctx)
 {
         saved_cursor = ctx->position;
 }
+
 void
 restore_cursor(Context *ctx)
 {
         ctx->position = saved_cursor;
 }
-
-typedef struct Immediate {
-        int n;
-        struct Immediate *next;
-} Immd;
 
 Immd *
 get_data(Immd *data, char **c)
@@ -168,31 +172,32 @@ move_cursor_to(Immd data, Context *ctx)
 }
 
 void
-erase(Immd n, char **c, Context *ctx){
+erase(Immd n, char **c, Context *ctx)
+{
         switch (**c) {
-                case 'J':
-                        if (n.n == 0) erase_end_screen(ctx);
-                        if (n.n == 1) erase_begin_screen(ctx);
-                        if (n.n == 2) erase_screen(ctx);
-                        if (n.n == 3) erase_saved_lines(ctx);
-                        break;
-                case 'K':
-                        if (n.n == 0) erase_end_line(ctx);
-                        if (n.n == 1) erase_begin_line(ctx);
-                        if (n.n == 2) erase_line(ctx);
-                        break;
+        case 'J':
+                if (n.n == 0) erase_end_screen(ctx);
+                if (n.n == 1) erase_begin_screen(ctx);
+                if (n.n == 2) erase_screen(ctx);
+                if (n.n == 3) erase_saved_lines(ctx);
+                break;
+        case 'K':
+                if (n.n == 0) erase_end_line(ctx);
+                if (n.n == 1) erase_begin_line(ctx);
+                if (n.n == 2) erase_line(ctx);
+                break;
         }
-/*ESC Code Sequence | Description                               |
-| :---------------- | :---------------------------------------- |
-| `ESC[J`           | erase in display (same as `ESC[0J`)       |
-| `ESC[0J`          | erase from cursor until end of screen     |
-| `ESC[1J`          | erase from cursor to beginning of screen  |
-| `ESC[2J`          | erase entire screen                       |
-| `ESC[3J`          | erase saved lines                         |
-| `ESC[K`           | erase in line (same as `ESC[0K`)          |
-| `ESC[0K`          | erase from cursor to end of line          |
-| `ESC[1K`          | erase start of line to the cursor         |
-| `ESC[2K`          | erase the entire line                    */
+        /*ESC Code Sequence | Description                               |
+        | :---------------- | :---------------------------------------- |
+        | `ESC[J`           | erase in display (same as `ESC[0J`)       |
+        | `ESC[0J`          | erase from cursor until end of screen     |
+        | `ESC[1J`          | erase from cursor to beginning of screen  |
+        | `ESC[2J`          | erase entire screen                       |
+        | `ESC[3J`          | erase saved lines                         |
+        | `ESC[K`           | erase in line (same as `ESC[0K`)          |
+        | `ESC[0K`          | erase from cursor to end of line          |
+        | `ESC[1K`          | erase start of line to the cursor         |
+        | `ESC[2K`          | erase the entire line                    */
 }
 
 void
@@ -211,7 +216,7 @@ eval_escseq(char **c, Context *ctx)
                 case 'm': // color
                         d = &data;
                         do {
-                                apply_color(d->n, &ctx->color, &ctx->bgcolor);
+                                apply_color(d->n, ctx);
                         } while ((d = d->next)->next);
                         break;
 

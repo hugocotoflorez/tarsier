@@ -1,7 +1,10 @@
 font:
-        path    /usr/share/fonts/Iosevka/IosevkaNerdFontMono-Medium.ttf
-        size    36
-        spacing 0
+        base            /usr/share/fonts/Iosevka/IosevkaNerdFontMono-Medium.ttf
+        bold            /usr/share/fonts/Iosevka/IosevkaNerdFont-Bold.ttf
+        italic          /usr/share/fonts/Iosevka/IosevkaNerdFontItalic.ttf
+        bold-italic     /usr/share/fonts/Iosevka/IosevkaNerdFont-BoldItalic.ttf
+        size            36
+        spacing         0
 
 colors:
         background      #424751
