@@ -1,7 +1,7 @@
 CC = cc -ggdb -std=gnu99
 INC = -I.
 LIB = -Lraylib/src -lraylib -lm
-HEADERS = $(wildcard src/*.h raylib)
+HEADERS = $(wildcard src/*.h) raylib
 SRC = $(wildcard src/*.c)
 OBJ = $(patsubst %.c,$(OBJ_DIR)/%.o,$(SRC))
 OBJ_DIR = ./objs
@@ -29,8 +29,6 @@ clean:
 
 install: $(OUT) clean
 	mv $(OUT) ~/.local/bin/$(OUT)
-	chmod +x ~/.local/bin/$(OUT)
-
 
 raylib:
 	sudo pacman --needed -S alsa-lib mesa libx11 libxrandr libxi libxcursor libxinerama
